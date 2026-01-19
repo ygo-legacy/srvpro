@@ -1,0 +1,22 @@
+{
+  "windbots": [
+    {
+      "name": "Test Bot",
+      "deck": "BlueEyes",
+      "difficulty": 1,
+      "dialog": "default"
+    },
+    {
+      "name": "Starter Bot",
+      "deck": "SpeedDroid",
+      "difficulty": 1,
+      "dialog": "default"
+    },
+    {
+      "name": "Chaos Bot",
+      "deck": "Chaos",
+      "difficulty": 2,
+      "dialog": "default"
+    }
+  ]
+}

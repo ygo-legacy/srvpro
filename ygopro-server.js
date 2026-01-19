@@ -475,6 +475,18 @@
       delete settings.modules.arena_mode.init_post;
       imported = true;
     }
+    // YGO Legacy: migrate bots to windbot for backward compatibility
+    if (settings.modules.bots && settings.modules.bots.enabled) {
+      settings.modules.windbot = {
+        enabled: settings.modules.bots.enabled,
+        botlist: settings.modules.bots.botlist,
+        spawn: settings.modules.bots.config?.spawn || false,
+        port: settings.modules.bots.config?.port || 2399,
+        server_ip: settings.modules.bots.config?.host || 'localhost',
+        my_ip: settings.modules.bots.config?.my_ip || 'srvpro'
+      };
+      log.info('[Bots] Migrated bots config to windbot for compatibility');
+    }
     //finish
     keysFromEnv = Object.keys(process.env).filter((key) => {
       return key.startsWith('SRVPRO_');
