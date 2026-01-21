@@ -485,7 +485,11 @@
         server_ip: settings.modules.bots.config?.host || 'localhost',
         my_ip: settings.modules.bots.config?.my_ip || 'srvpro'
       };
+      // Keep bots config for ai_vs_ai and other future features
       log.info('[Bots] Migrated bots config to windbot for compatibility');
+      if (settings.modules.bots.ai_vs_ai?.enabled) {
+        log.info('[Bots] AI vs AI mode enabled, max concurrent:', settings.modules.bots.ai_vs_ai.max_concurrent);
+      }
     }
     //finish
     keysFromEnv = Object.keys(process.env).filter((key) => {
@@ -621,7 +625,21 @@
     }
     if (settings.modules.windbot.enabled) {
       log.info("Reading bot list.");
-      windbots = global.windbots = ((await loadJSONAsync(settings.modules.windbot.botlist))).windbots;
+      // YGO Legacy: Load bots from backend API if BOTS_API_URL is set
+      var botsApiUrl = process.env.BOTS_API_URL;
+      if (botsApiUrl) {
+        try {
+          log.info("[Bots] Loading from API:", botsApiUrl);
+          var response = await axios.get(botsApiUrl);
+          windbots = global.windbots = response.data.windbots;
+          log.info("[Bots] Loaded", windbots.length, "bots from API");
+        } catch (err) {
+          log.warn("[Bots] Failed to load from API, falling back to local file:", err.message);
+          windbots = global.windbots = ((await loadJSONAsync(settings.modules.windbot.botlist))).windbots;
+        }
+      } else {
+        windbots = global.windbots = ((await loadJSONAsync(settings.modules.windbot.botlist))).windbots;
+      }
       real_windbot_server_ip = global.real_windbot_server_ip = settings.modules.windbot.server_ip;
       if (!settings.modules.windbot.server_ip.includes("127.0.0.1")) {
         dns = require('dns');
@@ -989,6 +1007,7 @@
   ROOM_find_or_create_by_name = global.ROOM_find_or_create_by_name = async function (name, player_ip) {
     var room, success, uname;
     uname = name.toUpperCase();
+
     if (settings.modules.windbot.enabled && (uname.slice(0, 2) === 'AI' || (!settings.modules.random_duel.enabled && uname === ''))) {
       return ROOM_find_or_create_ai(name);
     }
@@ -1116,6 +1135,7 @@
     result.private = true;
     return result;
   };
+
 
   ROOM_find_by_name = global.ROOM_find_by_name = function (name) {
     var result;
@@ -2259,8 +2279,9 @@
 
     add_windbot(botdata) {
       this.windbot = botdata;
+      var windbotUrl = `http://${settings.modules.windbot.server_ip}:${settings.modules.windbot.port}/?name=${encodeURIComponent(botdata.name)}&deck=${encodeURIComponent(botdata.deck)}&host=${settings.modules.windbot.my_ip}&port=${settings.port}&dialog=${encodeURIComponent(botdata.dialog || 'default')}&version=${settings.version}&password=${encodeURIComponent(this.name)}`;
       request({
-        url: `http://${settings.modules.windbot.server_ip}:${settings.modules.windbot.port}/?name=${encodeURIComponent(botdata.name)}&deck=${encodeURIComponent(botdata.deck)}&host=${settings.modules.windbot.my_ip}&port=${settings.port}&dialog=${encodeURIComponent(botdata.dialog)}&version=${settings.version}&password=${encodeURIComponent(this.name)}`
+        url: windbotUrl
       }, (error, response, body) => {
         if (error) {
           log.warn('windbot add error', error, this.name);
@@ -2541,6 +2562,7 @@
         ygopro.stoc_die(client, this.error);
         return false;
       }
+
       if (this.duel_stage !== ygopro.constants.DUEL_STAGE.BEGIN) {
         return this.join_post_watch(client);
       }
